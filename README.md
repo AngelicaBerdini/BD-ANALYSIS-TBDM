@@ -13,7 +13,7 @@ Publish the data on ElasticSearch
 Show some dashboard about the sentiment analysis (using charts, maps, etc.)
 
 The high level architecture can be defined as follows:
-![alt text](https://github.com/AngelicaBerdini/BD-ANALYSIS-TBDM/blob/main/SoftwareArchitecture.png?raw=true)
+![alt text](https://github.com/AngelicaBerdini/BD-ANALYSIS-TBDM/blob/main/utils/images/SoftwareArchitecture.png?raw=true)
 ## Installation
 
 Install my-project with npm
