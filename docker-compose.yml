@@ -1,4 +1,5 @@
 version: "3.7"
+
 services:
   spark-master:
     image: bitnami/spark:latest
@@ -6,6 +7,7 @@ services:
     command: bin/spark-class org.apache.spark.deploy.master.Master
     environment:
       - SPARK_MODE=master
+      - INIT_DAEMON_STEP=setup_spark
     ports:
       - 9090:8080
       - 7077:7077
@@ -35,28 +37,32 @@ services:
       SPARK_MASTER_URL: spark://spark-master:7077
 
   jupyter:
-    image: jupyter/base-notebook
+    image: jupyter/all-spark-notebook
     container_name: jupyter
     ports:
       - "8888:8888"
     volumes:
       - ./notebooks:/home/jovyan/work
       - ${LOCAL_DATASET_PATH-./data}:/home/jovyan/dataset
-    command: start-notebook.sh --NotebookApp.token=''
+      - ${LOCAL_MODELS_PATH-./models}:/home/jovyan/models
+    environment:
+      - JUPYTER_ENABLE_LAB=yes
+    command: bash -c "pip install --user findspark && pip list && start-notebook.sh --NotebookApp.token='' "
     depends_on:
       - spark-master
       - spark-worker-1
       - spark-worker-2
 
-  install-dependencies:
-    image: bitnami/spark:latest
-    user: root
-    container_name: install-dependencies
-    command: pip install --user findspark
-    depends_on:
-      - spark-master
-      - spark-worker-1
-      - spark-worker-2
-      - jupyter
-    volumes:
-      - ./notebooks:/home/jovyan/work
+  # install-dependencies:
+  #   image: bitnami/spark:latest
+  #   user: root
+  #   container_name: install-dependencies
+  #   command: bash -c "pip install torch tensorflow transformers && pip list"
+  #   depends_on:
+  #     - spark-master
+  #     - spark-worker-1
+  #     - spark-worker-2
+  #     - jupyter
+  #   volumes:
+  #     - ./notebooks:/home/jovyan/work
+  #     - dependencies:/home/jovyan/.local
