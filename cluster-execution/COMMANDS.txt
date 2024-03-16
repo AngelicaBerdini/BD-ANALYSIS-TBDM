@@ -1,0 +1,10 @@
+docker-compose up -d
+ 
+docker cp -L ../prova.py spark-master:/opt/bitnami/spark/prova.py
+
+docker logs spark-master
+
+docker exec spark-master spark-submit --master spark://172.18.0.2:7077 prova.py
+
+To execute with jupyter notebook:
+docker-compose up -d
