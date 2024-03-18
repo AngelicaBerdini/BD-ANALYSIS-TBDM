@@ -1,68 +1,73 @@
-version: "3.7"
+version: "3.6"
 
+volumes:
+  dataset-volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOCAL_DATASET_PATH-./data}
+  models-volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ${LOCAL_MODELS_PATH-./models}
+  notebooks-volume:
+    driver: local
+    driver_opts:
+      type: none
+      o: bind
+      device: ./notebooks
 services:
-  spark-master:
-    image: bitnami/spark:latest
-    container_name: spark-master
-    command: bin/spark-class org.apache.spark.deploy.master.Master
-    environment:
-      - SPARK_MODE=master
-      - INIT_DAEMON_STEP=setup_spark
+  jupyterlab:
+    image: andreper/jupyterlab:3.0.0-spark-3.0.0
+    container_name: jupyterlab
     ports:
-      - 9090:8080
+      - 8888:8888
+      - 4040:4040
+    volumes:
+      - notebooks-volume:/opt/workspace
+      - dataset-volume:/opt/workspace/dataset
+      - models-volume:/home/jovyan/models
+  spark-master:
+    image: andreper/spark-master:3.0.0
+    container_name: spark-master
+    command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
+    volumes:
+      - notebooks-volume:/opt/workspace
+      - dataset-volume:/opt/workspace/dataset
+      - models-volume:/home/jovyan/models
+    ports:
+      - 8080:8080
       - 7077:7077
-
   spark-worker-1:
-    image: bitnami/spark:latest
+    image: andreper/spark-worker:3.0.0
     container_name: spark-worker-1
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
+    environment:
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=512m
+    ports:
+      - 8081:8081
     depends_on:
       - spark-master
-    environment:
-      SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 2g
-      SPARK_MASTER_URL: spark://spark-master:7077
-
+    volumes:
+      - notebooks-volume:/opt/workspace
+      - dataset-volume:/opt/workspace/dataset
+      - models-volume:/home/jovyan/models
   spark-worker-2:
-    image: bitnami/spark:latest
+    image: andreper/spark-worker:3.0.0
     container_name: spark-worker-2
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
-    depends_on:
-      - spark-master
     environment:
-      SPARK_MODE: worker
-      SPARK_WORKER_CORES: 2
-      SPARK_WORKER_MEMORY: 2g
-      SPARK_MASTER_URL: spark://spark-master:7077
-
-  jupyter:
-    image: jupyter/all-spark-notebook
-    container_name: jupyter
+      - SPARK_WORKER_CORES=2
+      - SPARK_WORKER_MEMORY=512m
     ports:
-      - "8888:8888"
-    volumes:
-      - ./notebooks:/home/jovyan/work
-      - ${LOCAL_DATASET_PATH-./data}:/home/jovyan/dataset
-      - ${LOCAL_MODELS_PATH-./models}:/home/jovyan/models
-    environment:
-      - JUPYTER_ENABLE_LAB=yes
-    command: bash -c "pip install --user findspark && pip list && start-notebook.sh --NotebookApp.token='' "
+      - 8082:8081
     depends_on:
       - spark-master
-      - spark-worker-1
-      - spark-worker-2
-
-  # install-dependencies:
-  #   image: bitnami/spark:latest
-  #   user: root
-  #   container_name: install-dependencies
-  #   command: bash -c "pip install torch tensorflow transformers && pip list"
-  #   depends_on:
-  #     - spark-master
-  #     - spark-worker-1
-  #     - spark-worker-2
-  #     - jupyter
-  #   volumes:
-  #     - ./notebooks:/home/jovyan/work
-  #     - dependencies:/home/jovyan/.local
+    volumes:
+      - notebooks-volume:/opt/workspace
+      - dataset-volume:/opt/workspace/dataset
+      - models-volume:/home/jovyan/models
