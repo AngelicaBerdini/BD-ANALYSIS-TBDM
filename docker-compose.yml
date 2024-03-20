@@ -1,3 +1,4 @@
+# https://github.com/cluster-apps-on-docker/spark-standalone-cluster-on-docker
 version: "3.6"
 
 volumes:
@@ -19,9 +20,13 @@ volumes:
       type: none
       o: bind
       device: ./notebooks
+  elasticsearch-data-single:
+    driver: local
 services:
   jupyterlab:
-    image: andreper/jupyterlab:3.0.0-spark-3.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile.jupyter
     container_name: jupyterlab
     ports:
       - 8888:8888
@@ -29,25 +34,29 @@ services:
     volumes:
       - notebooks-volume:/opt/workspace
       - dataset-volume:/opt/workspace/dataset
-      - models-volume:/home/jovyan/models
+      - models-volume:/opt/workspace/models
   spark-master:
-    image: andreper/spark-master:3.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
     container_name: spark-master
     command: bin/spark-class org.apache.spark.deploy.master.Master -h spark-master
     volumes:
       - notebooks-volume:/opt/workspace
       - dataset-volume:/opt/workspace/dataset
-      - models-volume:/home/jovyan/models
+      - models-volume:/opt/workspace/models
     ports:
       - 8080:8080
       - 7077:7077
   spark-worker-1:
-    image: andreper/spark-worker:3.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
     container_name: spark-worker-1
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
       - SPARK_WORKER_CORES=2
-      - SPARK_WORKER_MEMORY=512m
+      - SPARK_WORKER_MEMORY=2048m
     ports:
       - 8081:8081
     depends_on:
@@ -55,14 +64,16 @@ services:
     volumes:
       - notebooks-volume:/opt/workspace
       - dataset-volume:/opt/workspace/dataset
-      - models-volume:/home/jovyan/models
+      - models-volume:/opt/workspace/models
   spark-worker-2:
-    image: andreper/spark-worker:3.0.0
+    build:
+      context: .
+      dockerfile: Dockerfile.spark
     container_name: spark-worker-2
     command: bin/spark-class org.apache.spark.deploy.worker.Worker spark://spark-master:7077
     environment:
       - SPARK_WORKER_CORES=2
-      - SPARK_WORKER_MEMORY=512m
+      - SPARK_WORKER_MEMORY=2048m
     ports:
       - 8082:8081
     depends_on:
@@ -70,4 +81,29 @@ services:
     volumes:
       - notebooks-volume:/opt/workspace
       - dataset-volume:/opt/workspace/dataset
-      - models-volume:/home/jovyan/models
+      - models-volume:/opt/workspace/models
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.7.1
+    container_name: elasticsearch
+    volumes:
+      - elasticsearch-data-single:/usr/share/elasticsearch/data
+    ports:
+      - 9200:9200
+    restart: always
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+  kibana:
+    depends_on:
+      - elasticsearch
+    image: docker.elastic.co/kibana/kibana:8.7.1
+    container_name: kibana
+    ports:
+      - 5601:5601
+    restart: always
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
