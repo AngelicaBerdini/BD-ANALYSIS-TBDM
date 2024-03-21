@@ -144,6 +144,17 @@ The model is saved to be then loaded with the `load` instruction.
 
 Note that here the models are divided by _"cluster"_ and _"colab"_ execution, since the 2 models are indeed completely different and won't work on each other contexts.
 
+### Docker-Compose
+Lastly, talking about the `docker-compose` this is structured in 6 services as stated before:
+- Jupyter Notebook instance
+- Spark Node Master
+- Spark Worker 1
+- Spark Worker 2
+- Elasticsearch instance
+- Kibana instance
+
+Also, each of them has their respective volumes in order to read notebooks, models, and datasets.
+There are also 2 Dockerfiles to better structure the docker-compose and to avoid overcrowding it.
 
 ## Authors
 
