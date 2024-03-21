@@ -1,4 +1,9 @@
 numpy
-pandas
 matplotlib
-scikit-learn
+pandas
+pyarrow
+torch
+tensorflow
+tf-keras
+transformers
+# tensorrt
